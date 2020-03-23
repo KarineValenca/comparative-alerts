@@ -1,0 +1,68 @@
+version: '3.5'
+
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.2.25
+    ports:
+      - 2380:2379
+    environment:
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+
+  alertmanager:
+    image: labbsr0x/big-brother-alertmanager
+    ports:
+      - 9093:9093
+    environment:
+      - WEBHOOK_URL=http://bot:3000/alertmanager
+    volumes:
+      - alertmanager:/alertmanager
+
+  # below is defined the example setup for metric consumption by big brother
+
+  example-service:
+    image: labbsr0x/metrics-generator-tabajara:latest
+    depends_on:
+      - etcd
+    ports:
+      - 32865
+    environment:
+      - COMPONENT_NAME=app2
+      - REGISTRY_SERVICE=app2
+      - REGISTRY_ETCD_URL=http://etcd:2379
+
+  example-service2:
+    image: labbsr0x/metrics-generator-tabajara:latest
+    depends_on:
+      - etcd
+    ports:
+      - 32865
+    environment:
+      - REGISTRY_SERVICE=app1
+      - COMPONENT_NAME=app1
+      - REGISTRY_ETCD_URL=http://etcd:2379
+  
+  example-bb-promster:
+    build: .
+    image: labbsr0x/bb-promster:latest
+    depends_on:
+      - etcd
+      - example-service
+    ports:
+      - 9092:9090
+    environment:
+      - REGISTRY_SERVICE=promster-app1
+      - REGISTRY_ETCD_BASE=/services
+      - BB_PROMSTER_LEVEL=1
+      - ETCD_URLS=http://etcd:2379
+      - SCRAPE_ETCD_PATH=/services/app1
+      - ALERT_MANAGER_URLS=alertmanager:9093
+      - ALERT_MANAGER_SCHEME=http
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+
+volumes:
+  alertmanager:
