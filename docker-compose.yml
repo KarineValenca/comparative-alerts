@@ -58,9 +58,11 @@ services:
       - SCRAPE_ETCD_PATH=/services/app1
       - ALERT_MANAGER_URLS=alertmanager:9093
       - ALERT_MANAGER_SCHEME=http
+      - PILOT_VERSION=v0002
 
-  grafana:
-    image: grafana/grafana
+  dommer:
+    build: .
+    image: dommer:latest
     ports:
       - 3000:3000
 
